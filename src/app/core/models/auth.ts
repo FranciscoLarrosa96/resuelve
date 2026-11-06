@@ -54,6 +54,13 @@ export interface RefreshRequest {
 }
 
 /** Respuesta de login, refresh y de verificar un registro pendiente. */
+/** POST /auth/google: el ID token de Google y, solo si crea la cuenta, intención y referido. */
+export interface GoogleSignInRequest {
+  credential: string;
+  professionalIntent?: boolean;
+  referralCode?: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;

@@ -8,6 +8,7 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { AVATAR_STORAGE, AvatarStorage } from '../professionals/avatar/avatar-storage';
 import { DOCUMENT_STORAGE, DocumentStorage } from '../verifications/document-storage';
+import { GOOGLE_TOKEN_VERIFIER, type GoogleTokenVerifier } from '../auth/google-sign-in';
 import {
   ACTIVE_JOB_STATUSES,
   ACTIVE_REQUEST_STATUSES,
@@ -25,6 +26,7 @@ interface UserRow {
   id: string;
   email: string;
   password_hash: string;
+  google_sub: string | null;
   deleted_at: Date | null;
 }
 
@@ -43,6 +45,7 @@ export class AccountService {
     private readonly config: ConfigService,
     @Inject(AVATAR_STORAGE) private readonly photos: AvatarStorage,
     @Inject(DOCUMENT_STORAGE) private readonly documents: DocumentStorage,
+    @Inject(GOOGLE_TOKEN_VERIFIER) private readonly google: GoogleTokenVerifier,
   ) {}
 
   /** Qué impide la baja ahora mismo (lista vacía = se puede). */
@@ -51,11 +54,20 @@ export class AccountService {
     return { canDelete: blockers.length === 0, blockers };
   }
 
-  async delete(userId: string, password: string): Promise<{ deleted: true }> {
+  async delete(userId: string, proof: { password?: string; googleCredential?: string }): Promise<{ deleted: true }> {
     const user = await this.findUser(userId);
     if (user.deleted_at) return { deleted: true }; // ya dada de baja (token todavía vigente)
 
-    const valid = await argon2.verify(user.password_hash, password).catch(() => false);
+    if (proof.googleCredential) {
+      // Cuentas que entran con Google: la misma cuenta de Google confirma la baja.
+      const clientId = this.config.get<string>('GOOGLE_CLIENT_ID')?.trim();
+      const identity = clientId ? await this.google.verify(proof.googleCredential, clientId) : null;
+      if (!identity || !user.google_sub || identity.sub !== user.google_sub) {
+        throw AppException.forbidden('No pudimos confirmar que sea tu cuenta de Google.', ErrorCode.ACCOUNT_PASSWORD_INCORRECT);
+      }
+      return this.anonymize(user, 'self');
+    }
+    const valid = await argon2.verify(user.password_hash, proof.password ?? '').catch(() => false);
     if (!valid) {
       // 403, nunca 401: el frontend cierra la sesión ante un 401 y acá la persona sigue autenticada.
       throw AppException.forbidden('La contraseña no es correcta.', ErrorCode.ACCOUNT_PASSWORD_INCORRECT);
@@ -120,7 +132,7 @@ export class AccountService {
 
   private async findUser(userId: string): Promise<UserRow> {
     const [user] = await this.dataSource.query<UserRow[]>(
-      `SELECT id, email, password_hash, deleted_at FROM users WHERE id = $1`,
+      `SELECT id, email, password_hash, google_sub, deleted_at FROM users WHERE id = $1`,
       [userId],
     );
     if (!user) throw AppException.notFound('Usuario');
@@ -310,7 +322,7 @@ export class AccountService {
     const id = user.id;
     await m.query(
       `UPDATE users
-          SET first_name = $2, last_name = $3, email = $4, password_hash = $5, phone = NULL, phone_verified = false,
+          SET first_name = $2, last_name = $3, email = $4, password_hash = $5, google_sub = NULL, phone = NULL, phone_verified = false,
               email_verified_at = NULL, avatar_url = NULL, is_admin = false, default_zone_id = NULL, preferred_city_id = NULL,
               deleted_at = now(), updated_at = now()
         WHERE id = $1`,

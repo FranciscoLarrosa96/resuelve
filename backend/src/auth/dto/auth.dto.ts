@@ -129,6 +129,30 @@ export class ChangeEmailDto {
   password: string;
 }
 
+export class GoogleSignInDto {
+  @ApiProperty({ description: 'ID token (JWT) que entrega Google Identity Services en el navegador.' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(4096)
+  credential: string;
+
+  @ApiPropertyOptional({ description: 'Solo al crear la cuenta: eligió crear un perfil profesional; no otorga permisos.' })
+  @IsOptional()
+  @IsBoolean()
+  professionalIntent?: boolean;
+
+  @ApiPropertyOptional({ description: 'Solo al crear la cuenta.' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^PRO-[A-F0-9]{32}$/)
+  referralCode?: string;
+}
+
+export class AuthProvidersDto {
+  @ApiProperty({ nullable: true, description: 'ID de cliente OAuth de Google (público); null = sin ingreso con Google.' })
+  googleClientId: string | null;
+}
+
 export class AuthTokensDto {
   @ApiProperty() accessToken: string;
   @ApiProperty() refreshToken: string;

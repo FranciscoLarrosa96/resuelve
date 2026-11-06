@@ -10,6 +10,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { AUTH_LIMITS, RegisterRequest } from '../../core/models/auth';
 import { Icon } from '../../shared/components/icon/icon';
+import { GoogleButton } from '../../shared/components/google-button/google-button';
 import { Dialog } from '../../shared/components/dialog/dialog';
 import { TermsPage } from '../legal/terms-page';
 import { PrivacyPage } from '../legal/privacy-page';
@@ -19,7 +20,7 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
 
 @Component({
   selector: 'app-register-page',
-  imports: [ReactiveFormsModule, RouterLink, Icon, Dialog, TermsPage, PrivacyPage],
+  imports: [ReactiveFormsModule, RouterLink, Icon, Dialog, TermsPage, PrivacyPage, GoogleButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-md animate-fade-in px-5 pt-8 pb-20 lg:max-w-lg lg:pt-16">
@@ -36,11 +37,14 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
           }
         </p>
       }
+      <div class="mt-7">
+        <app-google-button text="signup_with" dividerText="o completá tus datos" (credential)="google($event)" />
+      </div>
       <form
         [formGroup]="form"
         (ngSubmit)="submit()"
         novalidate
-        class="mt-7 flex flex-col gap-4.5 rounded-2xl border border-line bg-surface p-5.5"
+        class="mt-4 flex flex-col gap-4.5 rounded-2xl border border-line bg-surface p-5.5"
       >
         @if (auth.error(); as err) {
           <div
@@ -199,7 +203,7 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
           }
         </p>
         <p class="text-center text-[14px] leading-relaxed text-muted" data-testid="legal-note">
-          Al crear tu cuenta, aceptás los
+          Al crear tu cuenta (también con Google), aceptás los
           <button
             type="button"
             class="font-semibold text-brand underline underline-offset-2"
@@ -324,6 +328,20 @@ export class RegisterPage extends AuthForm {
       return `La contraseña necesita al menos ${AUTH_LIMITS.passwordMin} caracteres.`;
     if (control.hasError('maxlength')) return 'Es demasiado largo.';
     return 'Revisá este dato.';
+  }
+
+  /** Si Google crea la cuenta: misma intención y mismo referido que el formulario. */
+  protected override googleExtras(): { professionalIntent?: boolean; referralCode?: string } {
+    return {
+      ...(this.professionalSignup || this.returnUrl?.split(/[?#]/)[0] === '/soy-profesional' ? { professionalIntent: true } : {}),
+      ...(this.referralCode ? { referralCode: this.referralCode } : {}),
+    };
+  }
+
+  protected override afterGoogle(): void {
+    if (this.referralCode) this.journey.capture('REFERRAL');
+    if (this.professionalSignup) this.router.navigate(['/soy-profesional']);
+    else this.continueAfterAuth();
   }
 
   protected async submit(): Promise<void> {

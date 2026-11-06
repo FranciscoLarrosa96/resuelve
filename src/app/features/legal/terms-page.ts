@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-22';
+export const TERMS_VERSION = '2026-11-06';
 /** Fecha visible y `datetime` salen de la versión: una sola fuente, no pueden quedar desfasadas. */
 const TERMS_UPDATED_DATE = TERMS_VERSION.slice(0, 10);
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];

@@ -218,6 +218,15 @@ export class EnvironmentVariables {
   @IsOptional()
   GOOGLE_MAPS_API_KEY?: string;
 
+  /**
+   * Ingreso con Google: ID de cliente OAuth (Web) de Google Cloud. Es público (va al
+   * navegador). Sin definir, «Continuar con Google» no se ofrece y POST /auth/google
+   * responde 404. Gratis: no usa APIs pagas.
+   */
+  @IsString()
+  @IsOptional()
+  GOOGLE_CLIENT_ID?: string;
+
   /** Oportunidades discovery distintas desde la primera respuesta Free, para siempre. 0 = sin límite. */
   @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
   @IsInt()

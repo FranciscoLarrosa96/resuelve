@@ -49,7 +49,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-22">22 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-11-06">6 de noviembre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -240,6 +240,15 @@ const DESCRIPTION =
         </section>
 
         <section class="mt-12" aria-labelledby="dictado">
+          <h2 id="google" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Ingresar con Google</h2>
+          <p>Si elegís «Continuar con Google», Google te pide permiso y nos manda una confirmación firmada de tu cuenta.</p>
+          <ul>
+            <li>De esa confirmación guardamos tu <strong>nombre, apellido y email</strong> (para tu cuenta, igual que si los escribieras) y un <strong>identificador de tu cuenta de Google</strong>, que sirve para reconocerte la próxima vez. No recibimos tu contraseña de Google ni accedemos a tu correo, contactos o archivos.</li>
+            <li>Si ya tenías una cuenta en Resuelve con ese email, la vinculamos. Si ese email nunca se había confirmado, la contraseña anterior deja de servir y se cierran las sesiones abiertas, para que nadie más conserve el acceso.</li>
+            <li>Para mostrar el botón, tu navegador carga el código de Google Identity Services desde los servidores de Google, que lo trata según su propia política de privacidad.</li>
+            <li>Si eliminás tu cuenta, borramos el identificador de Google junto con el resto de tus datos personales. Para confirmar la baja podés usar tu contraseña o tu cuenta de Google.</li>
+          </ul>
+
           <h2 id="dictado" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Dictado por voz</h2>
           <p>Donde ves "Dictar con la voz" (por ejemplo, al describir un pedido o armar un presupuesto) podés hablar en lugar de escribir.</p>
           <ul>

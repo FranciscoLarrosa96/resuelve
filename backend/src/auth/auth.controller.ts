@@ -17,8 +17,10 @@ import { Public } from '../common/auth/public.decorator';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import {
+  AuthProvidersDto,
   AuthTokensDto,
   ChangeEmailDto,
+  GoogleSignInDto,
   LoginDto,
   RefreshDto,
   RegisterDto,
@@ -80,6 +82,24 @@ export class AuthController {
   @ApiConflictResponse({ description: 'EMAIL_ALREADY_REGISTERED' })
   verifyRegistration(@Body() dto: VerifyPendingRegistrationDto): Promise<AuthTokensDto> {
     return this.auth.verifyPendingRegistration(dto.verificationSessionId, dto.code);
+  }
+
+  @Public()
+  @Get('providers')
+  @ApiOkResponse({ type: AuthProvidersDto })
+  providers(): AuthProvidersDto {
+    return this.auth.providers();
+  }
+
+  /** Entra, vincula o crea la cuenta con el ID token de Google Identity Services. */
+  @Public()
+  @Throttle({ default: { limit: AUTH_LIMIT, ttl: 60_000 } })
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: AuthTokensDto })
+  @ApiUnauthorizedResponse({ description: 'INVALID_GOOGLE_CREDENTIAL' })
+  google(@Body() dto: GoogleSignInDto): Promise<AuthTokensDto> {
+    return this.auth.googleSignIn(dto);
   }
 
   @Public()

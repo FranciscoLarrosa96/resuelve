@@ -6,6 +6,10 @@ export const ErrorCode = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   UNAUTHORIZED: 'UNAUTHORIZED',
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  /** El ID token de Google no es válido, venció, es de otra app o su email no está verificado. */
+  INVALID_GOOGLE_CREDENTIAL: 'INVALID_GOOGLE_CREDENTIAL',
+  /** El email ya está vinculado a otra cuenta de Google. */
+  GOOGLE_ACCOUNT_CONFLICT: 'GOOGLE_ACCOUNT_CONFLICT',
   INVALID_REFRESH_TOKEN: 'INVALID_REFRESH_TOKEN',
   FORBIDDEN: 'FORBIDDEN',
   NOT_FOUND: 'NOT_FOUND',

@@ -4,11 +4,12 @@ import { RouterLink } from '@angular/router';
 import { AUTH_LIMITS } from '../../core/models/auth';
 import { ToastService } from '../../core/services/toast.service';
 import { Icon } from '../../shared/components/icon/icon';
+import { GoogleButton } from '../../shared/components/google-button/google-button';
 import { AuthForm, FIELD_CLASS, SUBMIT_CLASS } from './auth-form';
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, RouterLink, Icon],
+  imports: [ReactiveFormsModule, RouterLink, Icon, GoogleButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-md animate-fade-in px-5 pt-8 pb-20 lg:pt-16">
@@ -22,11 +23,15 @@ import { AuthForm, FIELD_CLASS, SUBMIT_CLASS } from './auth-form';
         }
       </p>
 
+      <div class="mt-7">
+        <app-google-button (credential)="google($event)" />
+      </div>
+
       <form
         [formGroup]="form"
         (ngSubmit)="submit()"
         novalidate
-        class="mt-7 flex flex-col gap-4.5 rounded-2xl border border-line bg-surface p-5.5"
+        class="mt-4 flex flex-col gap-4.5 rounded-2xl border border-line bg-surface p-5.5"
       >
         @if (auth.error(); as err) {
           <div
@@ -119,6 +124,12 @@ import { AuthForm, FIELD_CLASS, SUBMIT_CLASS } from './auth-form';
           }
         </p>
       </form>
+
+      <p class="mt-4 text-center text-[13px] leading-relaxed text-muted" data-testid="google-legal">
+        Si es tu primera vez con Google, se crea tu cuenta y aceptás los
+        <a routerLink="/terminos" class="font-semibold text-brand underline underline-offset-2">Términos de Uso</a>
+        (ver la <a routerLink="/privacidad" class="font-semibold text-brand underline underline-offset-2">Política de Privacidad</a>).
+      </p>
 
       <p class="mt-5 text-center text-sm text-muted">
         ¿No tenés cuenta?
