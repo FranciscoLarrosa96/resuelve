@@ -1,3 +1,4 @@
+import { recordContactFollowup } from '../../contact-followups/contact-followups';
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ExposureEvent, ExposureEventType } from '../../analytics/exposure-event.entity';
@@ -125,6 +126,10 @@ export class ContactService {
     const number = profile ? contactNumberFor(profile, dto.channel) : null;
     if (!profile || !number) throw AppException.notFound('Contacto');
 
+    // «¿Lo contrataste?»: con sesión, se le pregunta unos días después (privado del cliente).
+    if (user?.userId && profile.userId !== user.userId) {
+      await recordContactFollowup(this.dataSource, user.userId, professionalId, dto.channel);
+    }
     if (dto.sessionKey && profile.userId !== user?.userId) {
       const type = dto.channel === 'WHATSAPP' ? ExposureEventType.WHATSAPP_CLICK : ExposureEventType.PHONE_CLICK;
       const sessionKeyHash = sha256(`resuelve-session|${dto.sessionKey}`);

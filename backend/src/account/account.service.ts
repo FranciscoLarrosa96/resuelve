@@ -330,6 +330,12 @@ export class AccountService {
       [id, DELETED_FIRST_NAME, DELETED_LAST_NAME, deletedEmail(id), `deleted:${randomUUID()}`],
     );
     await m.query(`DELETE FROM refresh_tokens WHERE user_id = $1`, [id]);
+    // «¿Lo contrataste?»: preguntas propias y las de otros clientes sobre su perfil profesional.
+    await m.query(
+      `DELETE FROM contact_followups
+        WHERE user_id = $1 OR professional_id IN (SELECT id FROM professional_profiles WHERE user_id = $1)`,
+      [id],
+    );
     await m.query(`DELETE FROM email_verification_codes WHERE user_id = $1`, [id]);
     await m.query(`DELETE FROM notifications WHERE user_id = $1`, [id]);
     await m.query(`DELETE FROM push_subscriptions WHERE user_id = $1`, [id]);

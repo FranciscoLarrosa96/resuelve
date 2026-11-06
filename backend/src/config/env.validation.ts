@@ -86,6 +86,13 @@ export class EnvironmentVariables {
   @Max(30)
   PRO_TRIAL_DAYS = 7;
 
+  /** «¿Lo contrataste?»: horas después de tocar WhatsApp o Llamar (con sesión) en que se pregunta. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 48 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(336)
+  CONTACT_FOLLOWUP_AFTER_HOURS = 48;
+
   /** Tope total de la prueba «hasta tu primer pedido» (`PRO_TRIAL_DAYS` corre desde el primer pedido). */
   @Transform(({ value }) => (value === undefined || value === '' ? 30 : Number(value)))
   @IsInt()

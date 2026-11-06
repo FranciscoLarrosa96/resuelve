@@ -239,6 +239,45 @@ describeE2E('Canales de contacto (e2e)', () => {
       .expect(400);
   });
 
+  it('«¿Lo contrataste?»: solo con sesión, unos días después, una vez y nunca al profesional', async () => {
+    const p = await pro('seguimiento');
+    await setContact(p, { whatsappEnabled: true, whatsappNumber: '249 15 400 0020', consent: true }).expect(200);
+    const client = await register('cliente-seguimiento');
+    const followups = async (token: string) =>
+      (await h.http.get(`${API}/me/contact-followups`).set(auth(token)).expect(200)).body.items;
+
+    // Anónimo: no se guarda nada personal. El propio profesional tampoco.
+    await reveal(p, 'WHATSAPP').expect(200);
+    await reveal(p, 'WHATSAPP', p.token).expect(200);
+    expect(await h.dataSource.query(`SELECT 1 FROM contact_followups WHERE professional_id = $1`, [p.proId])).toHaveLength(0);
+
+    await reveal(p, 'WHATSAPP', client.token).expect(200);
+    expect(await followups(client.token)).toEqual([]); // recién tocó: todavía no se pregunta
+    await h.dataSource.query(
+      `UPDATE contact_followups SET contacted_at = now() - interval '3 days' WHERE professional_id = $1`, [p.proId]);
+    const [item] = await followups(client.token);
+    expect(item).toMatchObject({ professionalId: p.proId, name: 'seguimiento Contacto', channel: 'WHATSAPP' });
+    expect(await followups(p.token)).toEqual([]);
+
+    // Responder la cierra; volver a tocar no la reabre.
+    await h.http.post(`${API}/me/contact-followups/${p.proId}/answer`).set(auth(client.token)).send({ answer: 'MAYBE' }).expect(400);
+    await h.http.post(`${API}/me/contact-followups/${p.proId}/answer`).set(auth(client.token)).send({ answer: 'HIRED' }).expect(200);
+    await h.http.post(`${API}/me/contact-followups/${p.proId}/answer`).set(auth(client.token)).send({ answer: 'HIRED' }).expect(404);
+    await reveal(p, 'WHATSAPP', client.token).expect(200);
+    await h.dataSource.query(
+      `UPDATE contact_followups SET contacted_at = now() - interval '3 days' WHERE professional_id = $1`, [p.proId]);
+    expect(await followups(client.token)).toEqual([]);
+
+    // Ya reseñado por invitación: no se pregunta. Muy viejo: tampoco.
+    const other = await register('cliente-resenado');
+    await reveal(p, 'WHATSAPP', other.token).expect(200);
+    await h.dataSource.query(
+      `UPDATE contact_followups SET contacted_at = now() - interval '40 days' WHERE user_id = (SELECT id FROM users WHERE lower(email) = $1)`,
+      [other.email],
+    );
+    expect(await followups(other.token)).toEqual([]);
+  });
+
   it('Tu mes: Free, PRO y Plus ven los totales de toques; el desglose y la comparación siguen siendo de PRO', async () => {
     const p = await pro('toques');
     const month = async (query: Record<string, unknown> = {}) =>

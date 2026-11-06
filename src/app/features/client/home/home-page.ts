@@ -35,6 +35,7 @@ import { Logo } from '../../../shared/components/logo/logo';
 import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
 import { ProShowcase } from './pro-showcase';
 import { ResultCard } from '../results/result-card/result-card';
+import { ContactFollowupCards } from '../../../shared/components/contact-followup/contact-followup';
 import { searchServices } from '../../../core/utils/catalog-search';
 import { CatalogEntry, interpretRequest } from '../../../core/utils/interpret-request';
 import { PlansStore } from '../../../core/state/plans.store';
@@ -59,6 +60,7 @@ import { proPriceAmount } from '../../../core/utils/quote-usage';
     ProShowcase,
     ServiceIcon,
     ResultCard,
+    ContactFollowupCards,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',

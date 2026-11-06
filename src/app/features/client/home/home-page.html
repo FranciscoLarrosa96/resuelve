@@ -22,6 +22,9 @@
       <span aria-hidden="true">→</span>
     </a>
   }
+  @if (auth.authenticated()) {
+    <app-contact-followup class="mb-6 block empty:hidden" />
+  }
   <section class="home-intro" aria-labelledby="home-title">
     <p class="eyebrow">{{ city() ? 'Encontrá profesionales en ' + city() : 'Encontrá profesionales en tu ciudad' }}</p>
     <h1 id="home-title">¿Qué necesitás resolver?</h1>

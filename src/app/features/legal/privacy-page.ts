@@ -211,7 +211,8 @@ const DESCRIPTION =
             <li>Solo se muestran si los cargás y <strong>aceptás expresamente</strong> que otros usuarios los vean. Guardamos la fecha en que lo aceptaste.</li>
             <li>El número no aparece en los listados ni en el código de tu perfil: se entrega a quien toca "WhatsApp" o "Llamar", sin pedirle cuenta, y con un límite de pedidos para frenar a quien quiera copiarlos en masa.</li>
             <li>Al tocar WhatsApp se abre una conversación con un saludo general de Resuelve, sin datos del cliente. Lo que se hablen por WhatsApp o por teléfono queda fuera de Resuelve: no lo vemos ni lo guardamos.</li>
-            <li>Contamos cuántas veces se tocaron esos botones, de forma anónima (como el resto de las métricas de exposición), sin guardar el número ni quién lo tocó.</li>
+            <li>Contamos cuántas veces se tocaron esos botones, de forma anónima (como el resto de las métricas de exposición), sin guardar el número. El profesional nunca ve quién lo tocó.</li>
+            <li id="lo-contrataste">Si tocás WhatsApp o Llamar <strong>con tu sesión iniciada</strong>, guardamos que contactaste a ese profesional y cuándo, solo para preguntarte unos días después si lo contrataste y, si querés, invitarte a dejar tu opinión. Es privado: el profesional no lo ve. Se pregunta una vez; si respondés o pasan 30 días, no se vuelve a preguntar. Se borra si eliminás tu cuenta.</li>
             <li><strong>Podés apagar cada canal o retirar tu consentimiento</strong> cuando quieras desde Mi perfil: al retirarlo, dejamos de mostrar los números y los borramos. Tené en cuenta que quien ya vio tu número puede haberlo guardado: no podemos garantizar que no se use por fuera de Resuelve.</li>
           </ul>
         </section>
