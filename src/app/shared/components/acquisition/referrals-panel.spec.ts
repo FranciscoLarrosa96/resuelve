@@ -40,9 +40,9 @@ describe('ReferralsPanel', () => {
     expect(el.querySelector('h2')?.textContent).toContain('Invitá hasta 3 colegas');
     expect(el.querySelector('a[href*="wa.me"]')).not.toBeNull();
     expect(el.textContent).toContain('Copiar enlace');
-    expect(el.textContent).toContain('Cada colega puede activar 7 días de PRO con su perfil listo.');
+    expect(el.textContent).toContain('Cada colega puede activar una prueba gratis de PRO con su perfil publicado: dura hasta su primer pedido y 7 días más.');
     expect(el.textContent).not.toContain('presupuesto');
-    expect(el.textContent).toContain('7 días por persona, una sola vez');
+    expect(el.textContent).toContain('Una prueba por persona, una sola vez');
     expect(el.querySelector('[data-testid="referral-allowance"]')?.textContent).toContain('1 de 3 invitaciones usadas.');
     expect(el.textContent).toContain('Mis invitaciones (3)');
     expect(el.querySelector('#referral-link')).toBeNull();

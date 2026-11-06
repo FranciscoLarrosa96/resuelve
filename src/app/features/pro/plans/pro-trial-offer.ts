@@ -3,7 +3,7 @@ import { ProStore } from '../../../core/state/pro.store';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 
 /**
- * "Probar PRO gratis" (en Tu mes —la tarjeta del panel y la página— y en el momento de la
+ * "Probar PRO gratis hasta tu primer pedido" (en Tu mes —la tarjeta del panel y la página— y en el momento de la
  * pérdida: el detalle de una solicitud que le llegó tarde). Aparece
  * únicamente si el backend dice que puede activarla (`proTrial.state === 'AVAILABLE'`:
  * Free con perfil preparado, nunca pagó PRO ni tuvo una prueba). También en Mi plan. Opt-in: el
@@ -22,7 +22,7 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
         data-testid="pro-trial-offer"
       >
         <p class="min-w-0 text-[14.5px] leading-6 text-ink-soft">
-          <b class="text-ink">Probá Resuelve PRO {{ d }} días gratis.</b>
+          <b class="text-ink">Probá Resuelve PRO gratis hasta tu primer pedido.</b>
           Sin tarjeta y sin cobros: al terminar volvés a Free solo.
         </p>
         <button
@@ -46,13 +46,16 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
           id="pro-trial-title"
           class="mt-2 font-display text-[26px] leading-tight font-bold tracking-[-0.02em]"
         >
-          ¿Empezar tu prueba de {{ d }} días?
+          ¿Empezar tu prueba gratis de PRO?
         </h2>
         <div id="pro-trial-copy" class="mt-3 grid gap-2 text-[15px] leading-relaxed text-ink-soft">
           <p>
-            Durante {{ d }} días tenés todo lo de PRO: tu perfil puede ocupar espacios Destacados,
-            publicás trabajos con fotos en tu perfil y en resultados, y ves Tu mes completo.
-            También respondés pedidos de búsqueda sin el cupo de Free y tenés acceso anticipado cuando corresponde.
+            <b class="text-ink">Dura hasta tu primer pedido.</b> Cuando te llegue el primero, tenés
+            {{ d }} días más para aprovecharlo. Como máximo, {{ max() }} días en total.
+          </p>
+          <p>
+            Mientras dura tenés todo lo de PRO: salís primero cuando te buscan, respondés todos los
+            pedidos de presupuesto y mostrás tus trabajos con fotos.
           </p>
           <p>
             <b class="text-ink">Es gratis y sin tarjeta.</b> Al terminar volvés a Free solo, sin
@@ -101,6 +104,10 @@ export class ProTrialOffer {
   protected readonly days = computed(() => {
     const t = this.store.proTrial();
     return t?.state === 'AVAILABLE' ? t.days : null;
+  });
+  protected readonly max = computed(() => {
+    const t = this.store.proTrial();
+    return t?.state === 'AVAILABLE' ? (t.maxDays ?? t.days) : null;
   });
 
   protected async start(): Promise<void> {

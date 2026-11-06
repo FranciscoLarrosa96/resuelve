@@ -281,7 +281,7 @@ export class ProStore {
     this.refreshProfile();
   }
 
-  /** "Probar PRO 14 días gratis": activa la prueba y aplica el plan nuevo (badge, cupo y destacados sin F5). */
+  /** "Probar PRO gratis hasta tu primer pedido": activa la prueba y aplica el plan nuevo (badge, cupo y destacados sin F5). */
   async startProTrial(): Promise<boolean> {
     if (this.startingTrial()) return false;
     this.startingTrial.set(true);

@@ -86,6 +86,13 @@ export class EnvironmentVariables {
   @Max(30)
   PRO_TRIAL_DAYS = 7;
 
+  /** Tope total de la prueba «hasta tu primer pedido» (`PRO_TRIAL_DAYS` corre desde el primer pedido). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 30 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  PRO_TRIAL_MAX_DAYS = 30;
+
   @Transform(({ value }) => value === undefined || value === '' ? 24900 : Number(value))
   @IsInt()
   @Min(1)

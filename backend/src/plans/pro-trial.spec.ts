@@ -1,6 +1,6 @@
 import { PlanTier } from '../professionals/professional.enums';
 import { ConfigService } from '@nestjs/config';
-import { proTrialDays, proTrialIneligibility, proTrialReadiness } from './pro-trial';
+import { proTrialDays, proTrialIneligibility, proTrialMaxDays, proTrialReadiness } from './pro-trial';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 
 const now = new Date('2026-10-13T15:00:00Z');
@@ -55,14 +55,14 @@ describe('perfil preparado para probar PRO', () => {
       contactWhatsappEnabled: true, contactConsentAt: now, contactWhatsappNumber: '+5491112345678',
     })).toBeNull();
   });
-  it('exige publicación, avatar y canal publicable; no exige un portfolio que Free no puede publicar', async () => {
+  it('solo exige publicación: foto, canales y trabajos son recomendaciones', async () => {
     expect(await proTrialReadiness(db(), { ...ready, services: [] })).toBe('PROFILE_NOT_PUBLISHED');
     expect(await proTrialReadiness(db(), { ...ready, localities: [] })).toBe('PROFILE_NOT_PUBLISHED');
     expect(await proTrialReadiness(db(), { ...ready, status: 'PAUSED' as ProfessionalProfile['status'] })).toBe('PROFILE_NOT_PUBLISHED');
-    expect(await proTrialReadiness(db(), { ...ready, avatarUrl: null })).toBe('MISSING_AVATAR');
+    expect(await proTrialReadiness(db(), { ...ready, avatarUrl: null })).toBeNull();
     expect(await proTrialReadiness(db(), { ...ready, contactRequestsEnabled: false,
       contactWhatsappEnabled: true, contactWhatsappNumber: '+5491112345678',
-    })).toBe('NO_CONTACT_CHANNEL');
+    })).toBeNull();
     const empty = db(false);
     expect(await proTrialReadiness(empty, ready)).toBeNull();
     expect(empty.query).not.toHaveBeenCalled();
@@ -70,7 +70,13 @@ describe('perfil preparado para probar PRO', () => {
 });
 
 
-it('las pruebas nuevas duran como máximo 7 días, incluso con la configuración anterior de 14', () => {
+it('7 días desde el primer pedido, incluso con la configuración anterior de 14', () => {
   expect(proTrialDays(new ConfigService())).toBe(7);
   expect(proTrialDays(new ConfigService({ PRO_TRIAL_DAYS: 14 }))).toBe(7);
+});
+
+it('el tope total es 30 días y nunca menor que los días desde el primer pedido', () => {
+  expect(proTrialMaxDays(new ConfigService())).toBe(30);
+  expect(proTrialMaxDays(new ConfigService({ PRO_TRIAL_MAX_DAYS: 90 }))).toBe(30);
+  expect(proTrialMaxDays(new ConfigService({ PRO_TRIAL_MAX_DAYS: 3 }))).toBe(7);
 });

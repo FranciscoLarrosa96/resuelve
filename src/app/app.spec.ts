@@ -467,59 +467,57 @@ describe('home', () => {
     expect(el.querySelector('h1')?.textContent).toContain('¿Qué necesitás resolver?');
     expect(el.querySelector('#home-problem')).toBeTruthy();
     expect(el.querySelector('[data-testid="home-locality"]')).toBeTruthy();
-    expect(el.querySelector('[data-testid="home-find"]')?.textContent).toContain('Pedir presupuestos');
+    expect(el.querySelector('[data-testid="home-find"]')?.textContent).toContain('Pedir presupuesto a varios');
+    expect(el.querySelector('[data-testid="home-search"]')?.textContent).toContain('Buscar profesionales');
+    // Una sola caja: no hay que elegir un camino antes de escribir.
+    expect(el.querySelector('[role="tablist"]')).toBeNull();
     expect(el.querySelector('[data-testid="home-urgent"]')?.textContent).toContain('¿Necesitás ayuda urgente?');
     expect(el.querySelector('[data-testid="home-urgent"]')?.textContent).not.toMatch(/\d+ profesional|ahora/i);
     expect(el.querySelector('.home-door')).toBeNull();
   });
 
-  it('abre en "Buscar profesionales"; cambiar de camino muestra uno solo y conserva lo escrito', async () => {
-    const { fixture, el } = await renderWithProfessionals([], []);
-    const search = el.querySelector<HTMLElement>('[data-testid="home-panel-search"]')!;
-    const quote = el.querySelector<HTMLElement>('[data-testid="home-panel-quote"]')!;
-    expect(el.querySelector('[data-testid="home-tab-search"]')!.getAttribute('aria-selected')).toBe('true');
-    expect(search.hidden).toBe(false);
-    expect(quote.hidden).toBe(true);
-    el.querySelector<HTMLButtonElement>('[data-testid="home-tab-quote"]')!.click();
-    fixture.detectChanges();
-    expect(search.hidden).toBe(true);
-    expect(quote.hidden).toBe(false);
-    const input = el.querySelector<HTMLTextAreaElement>('#home-problem')!;
-    input.value = 'Saltan las térmicas con el horno';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    el.querySelector<HTMLButtonElement>('[data-testid="home-tab-search"]')!.click();
-    fixture.detectChanges();
-    el.querySelector<HTMLButtonElement>('[data-testid="home-tab-quote"]')!.click();
-    fixture.detectChanges();
-    expect(el.querySelector<HTMLTextAreaElement>('#home-problem')!.value).toBe('Saltan las térmicas con el horno');
-    // Teclado: la flecha alterna las pestañas.
-    el.querySelector<HTMLElement>('[data-testid="home-tab-quote"]')!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }),
-    );
-    fixture.detectChanges();
-    expect(search.hidden).toBe(false);
-  });
-
-  it('"Buscar profesionales" navega a resultados sin crear un pedido ni exigir login', async () => {
+  it('"Buscar profesionales" usa la misma caja: oficio o problema, sin crear un pedido ni exigir login', async () => {
     const { fixture, el } = await renderWithProfessionals([], []);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const store = TestBed.inject(RequestStore);
+    const input = el.querySelector<HTMLTextAreaElement>('#home-problem')!;
+    const type = (text: string) => {
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      fixture.detectChanges();
+    };
     el.querySelector<HTMLButtonElement>('[data-testid="home-search"]')!.click();
     expect(navigate).toHaveBeenLastCalledWith(['/profesionales']);
-    const input = el.querySelector<HTMLInputElement>('#home-trade')!;
-    input.value = 'plomería';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    fixture.detectChanges();
+    type('plomería');
     el.querySelector<HTMLButtonElement>('[data-testid="home-search"]')!.click();
     expect(navigate).toHaveBeenLastCalledWith(['/profesionales'], { queryParams: { servicio: 'plomeria' } });
-    input.value = 'oficio inexistente';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    fixture.detectChanges();
+    // El problema contado también lleva al oficio, con la misma regla que el pedido.
+    type('Gotea la canilla de la cocina');
+    el.querySelector<HTMLButtonElement>('[data-testid="home-search"]')!.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/profesionales'], { queryParams: { servicio: 'plomeria' } });
+    type('oficio inexistente');
     el.querySelector<HTMLButtonElement>('[data-testid="home-search"]')!.click();
     fixture.detectChanges();
-    expect(el.querySelector('#home-trade-hint')?.textContent).toContain('No encontramos ese oficio');
-    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('#home-box-hint')?.textContent).toContain('No encontramos ese oficio');
+    expect(navigate).toHaveBeenCalledTimes(3);
     expect(store.draft().description).toBe('');
+  });
+
+  it('"Pedir presupuesto a varios" sin texto pide que lo cuente; con texto arma el pedido', async () => {
+    const { fixture, el } = await renderWithProfessionals([], []);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    el.querySelector<HTMLButtonElement>('[data-testid="home-find"]')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('#home-box-hint')?.textContent).toContain('Contá en pocas palabras');
+    expect(navigate).not.toHaveBeenCalled();
+    const input = el.querySelector<HTMLTextAreaElement>('#home-problem')!;
+    input.value = 'Saltan las térmicas con el horno';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(el.querySelector('#home-box-hint')).toBeNull();
+    el.querySelector<HTMLButtonElement>('[data-testid="home-find"]')!.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/solicitud']);
+    expect(TestBed.inject(RequestStore).draft().description).toBe('Saltan las térmicas con el horno');
   });
 
   it('"Es para hoy" lleva a Urgencias: sin texto, la lista general; con servicio claro, sigue el pedido', async () => {

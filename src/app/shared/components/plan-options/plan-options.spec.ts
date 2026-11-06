@@ -29,7 +29,7 @@ it('no ofrece comprar Plus si el backend todavía no publica ese plan ni un cana
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
   expect([...el.querySelectorAll('button')].some((b) => b.textContent?.includes('Plus'))).toBe(false);
-  expect(el.textContent).toContain('Respondés oportunidades nuevas sin límite.');
+  expect(el.textContent).toContain('Respondés todos los pedidos.');
 });
 
 describe('Programar cambio a Plus (transferencia)', () => {
@@ -60,7 +60,7 @@ it('separa respuestas sin cupo de anticipación, sin prometer demora en hoy, urg
   f.detectChanges();
   const host = f.nativeElement as HTMLElement;
   const pro = host.querySelectorAll('article')[0];
-  expect(pro.textContent).toContain('Respondé todos los pedidos de búsqueda, sin el cupo de Free');
+  expect(pro.textContent).toContain('Respondés todos los pedidos de presupuesto');
   const rules = host.querySelector('[data-testid="plan-access-rules"]')!.textContent!;
   expect(rules).toContain('el mismo pedido también llega a un Free con espera');
   expect(rules).toContain('hoy, urgentes y dirigidos no tienen demora');

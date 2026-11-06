@@ -71,14 +71,14 @@ interface ReferralSummary {
             <p class="text-[14px] leading-5 text-ink-soft">
               {{
                 d.rewardsEnabled
-                  ? 'Cada colega puede activar ' + d.rewardDays + ' días de PRO con su perfil listo. Vos también tenés una única prueba: ' + d.rewardDays + ' días en total, no por cada invitación. Solo si nunca pagaste PRO ni usaste tu prueba.'
+                  ? 'Cada colega puede activar una prueba gratis de PRO con su perfil publicado: dura hasta su primer pedido y ' + d.rewardDays + ' días más. Vos también tenés una única prueba, no una por cada invitación. Solo si nunca pagaste PRO ni usaste tu prueba.'
                   : 'Invitá a un colega a trabajar con Resuelve. Las recompensas todavía no están habilitadas.'
               }}
             </p>
             @if (d.rewardsEnabled) {
               <span
                 class="justify-self-start rounded-full bg-surface px-2.5 py-1 text-[13px] font-semibold text-accent-ink"
-                >{{ d.rewardDays }} días por persona, una sola vez</span
+                >Una prueba por persona, una sola vez</span
               >
               <!-- Progreso: una marca por invitación usada. -->
               <div class="flex items-center gap-2.5">
@@ -140,7 +140,7 @@ interface ReferralSummary {
           <p class="mt-2 max-w-xl text-sm leading-6 text-muted">
             {{
               d.rewardsEnabled
-                ? 'Cada colega puede activar ' + d.rewardDays + ' días de PRO con su perfil listo. Vos también tenés una única prueba: ' + d.rewardDays + ' días en total, no por cada invitación. Solo si nunca pagaste PRO ni usaste tu prueba.'
+                ? 'Cada colega puede activar una prueba gratis de PRO con su perfil publicado: dura hasta su primer pedido y ' + d.rewardDays + ' días más. Vos también tenés una única prueba, no una por cada invitación. Solo si nunca pagaste PRO ni usaste tu prueba.'
                 : 'Invitá a un colega a trabajar con Resuelve. Las recompensas todavía no están habilitadas.'
             }}
           </p>

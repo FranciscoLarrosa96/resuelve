@@ -83,7 +83,7 @@ describe('prueba de PRO: oferta en Tu mes', () => {
     expect(render(null).el.textContent?.trim()).toBe('');
     TestBed.resetTestingModule();
     const { el } = render({ state: 'AVAILABLE', days: 14 });
-    expect(el.textContent).toContain('Probá Resuelve PRO 14 días gratis.');
+    expect(el.textContent).toContain('Probá Resuelve PRO gratis hasta tu primer pedido.');
     expect(el.textContent).toContain('Sin tarjeta y sin cobros');
   });
 

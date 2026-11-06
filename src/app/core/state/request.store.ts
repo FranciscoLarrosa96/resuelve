@@ -872,7 +872,7 @@ export class RequestStore {
   }
 
   /** Catálogo real para clasificar; antes de que cargue, el vocabulario conocido (se completa el id después). */
-  private catalogEntries(): CatalogEntry[] {
+  catalogEntries(): CatalogEntry[] {
     const active = this.catalog.activeServices();
     return active.length
       ? active.map((s) => ({ slug: s.slug, name: s.name }))

@@ -180,7 +180,7 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
                 con la promoción anterior. Tu acceso dura hasta el {{ until(r.accessUntil) }}.
               </p>
               <p class="mt-2" data-testid="referral-celebration-left">
-                Las nuevas invitaciones no acumulan días. Cada persona tiene una única prueba de hasta siete días.
+                Las nuevas invitaciones no acumulan días. Cada persona tiene una única prueba de PRO, hasta su primer pedido.
               </p>
             } @else {
               <p>

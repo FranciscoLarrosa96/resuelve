@@ -1,5 +1,4 @@
 import { MetricNotes } from './metric-notes';
-import { PRO_EARLY_ACCESS, PRO_RESPONSE_BENEFIT } from '../../../core/utils/pro-benefits';
 import { PlanOptions } from '../../../shared/components/plan-options/plan-options';
 import { PlanUseCases } from '../../../shared/components/plan-options/plan-use-cases';
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
@@ -53,18 +52,18 @@ import { PlanProfilePreview } from './plan-profile-preview';
 export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: 'star',
-    title: 'Destacate cuando te buscan',
-    text: 'Tu perfil y las fotos de tus trabajos pueden aparecer en espacios Destacados cuando buscan tus servicios donde trabajás.',
+    title: 'Aparecés destacado cuando te buscan en tu zona',
+    text: 'Tu perfil y las fotos de tus trabajos pueden aparecer en los espacios Destacados de tu oficio.',
   },
   {
     icon: 'clock',
-    title: PRO_RESPONSE_BENEFIT,
-    text: PRO_EARLY_ACCESS,
+    title: 'Respondés todos los pedidos de presupuesto',
+    text: 'Con Gratis tenés un cupo. Con PRO no hay límite, y si un pedido también va a perfiles Gratis, te llega primero.',
   },
   {
     icon: 'camera',
-    title: 'Mostrá más y medí el interés',
-    text: `Publicá hasta ${PRO_WORK_LIMIT} trabajos con ${PHOTOS_PER_WORK} fotos cada uno, sumá una portada y consultá Tu mes completo. Los trabajos con fotos requieren PRO.`,
+    title: 'Mostrás tus trabajos con fotos',
+    text: `Hasta ${PRO_WORK_LIMIT} trabajos con ${PHOTOS_PER_WORK} fotos cada uno, en tu perfil y en la búsqueda.`,
   },
 ];
 
@@ -225,6 +224,10 @@ export class ProPlansPage {
   protected readonly isPro = this.store.hasPro;
   /** Prueba de PRO en curso (los días vienen de la misma fuente que las recompensas, pero se cuenta distinto). */
   protected readonly proTrialActive = computed(() => this.store.proTrial()?.state === 'ACTIVE' && this.store.plan()?.source === 'BONUS');
+  protected readonly trialWaitingDays = computed(() => {
+    const t = this.store.proTrial();
+    return this.proTrialActive() && t?.state === 'ACTIVE' && t.waitingFirstRequest ? (t.firstRequestDays ?? 7) : null;
+  });
   protected readonly trialPreparation = computed(() => {
     const t = this.store.proTrial();
     if (t?.state !== 'UNAVAILABLE') return null;

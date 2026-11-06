@@ -214,7 +214,7 @@ describe('Trabajá con Resuelve', () => {
     const el = fixture.nativeElement as HTMLElement;
     const plans = text(el.querySelector('[data-testid="join-plans"]'));
     expect(plans).toContain('15.000');
-    const quota = [...el.querySelectorAll('[data-testid="join-compare"] tr')].find((r) => text(r).includes('Responder pedidos de búsqueda'));
+    const quota = [...el.querySelectorAll('[data-testid="join-compare"] tr')].find((r) => text(r).includes('Responder pedidos de presupuesto'));
     expect(text(quota)).toContain('3 en total');
     expect(text(quota)).toContain('Sin límite');
     // Precio fundador sin contador de lugares.
@@ -225,7 +225,7 @@ describe('Trabajá con Resuelve', () => {
     expect(el.querySelector('[data-testid="join-cta"]')?.getAttribute('href')).toBe('/registro/profesional');
     // El cupo Free se dice antes del alta, no al agotarlo.
     const cost = [...el.querySelectorAll('details')].find((d) => text(d).includes('¿Cuánto cuesta?'));
-    expect(text(cost)).toContain('Con presupuesto podés responder 3 pedidos de búsqueda en total: no se renueva cada mes');
+    expect(text(cost)).toContain('Podés responder 3 pedidos de presupuesto en total: no se renueva cada mes');
     expect(text(cost)).toMatch(/PRO es opcional: \$\s?15\.000 por mes/);
     expect(text(cost)).not.toMatch(/solicitudes sin límite/i);
   });

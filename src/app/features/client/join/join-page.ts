@@ -17,7 +17,7 @@ import { PlansInfo } from '../../../core/models/pro-analytics';
 import { AuthStore } from '../../../core/state/auth.store';
 import { PHOTOS_PER_WORK, PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
 import { formatMoney } from '../../../core/utils/format';
-import { FREE_DIRECT_REQUESTS, PRO_EARLY_ACCESS } from '../../../core/utils/pro-benefits';
+import { FREE_DIRECT_REQUESTS, PRO_EARLY_ACCESS, proThreeLines } from '../../../core/utils/pro-benefits';
 import { Icon } from '../../../shared/components/icon/icon';
 import { JoinPlanToggle, JoinProfilePreview, JoinSearchPreview, PreviewPlan } from './join-previews';
 
@@ -165,9 +165,9 @@ export const AUTO_PRO_DELAY_MS = 1200;
                 }
               </tbody>
             </table>
+            <p class="border-t border-line-soft px-4 py-3 text-[13px] leading-relaxed text-muted md:px-5" data-testid="plan-access-rules">{{ earlyAccess }} {{ directRequests }}</p>
           </details>
         </div>
-        <p class="mt-3 text-[13px] leading-relaxed text-muted" data-testid="plan-access-rules">{{ earlyAccess }} {{ directRequests }}</p>
 
         <div class="mt-8 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
           <article class="flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-6">
@@ -190,9 +190,12 @@ export const AUTO_PRO_DELAY_MS = 1200;
                 <app-icon name="shield" [size]="18" class="mt-0.5 shrink-0" />
                 <span>Los primeros {{ f.slots }} profesionales que contratan PRO <b class="font-bold">mantienen {{ money(f.priceArs) }}/mes</b> aunque el precio suba.</span>
               </p>
-            } @else {
-              <p class="text-[15px] text-ink-soft">Para que más clientes te encuentren y te elijan.</p>
             }
+            <ul class="grid gap-2 text-[15.5px] leading-6 text-ink" data-testid="join-pro-lines">
+              @for (line of proLines(); track line) {
+                <li class="flex gap-2.5"><app-icon name="check" [size]="18" [stroke]="2.6" class="mt-0.5 shrink-0 text-brand" />{{ line }}</li>
+              }
+            </ul>
             <p class="mt-auto pt-2 text-[14px] font-semibold text-brand">Lo activás desde Mi plan cuando quieras.</p>
           </article>
         </div>
@@ -339,10 +342,10 @@ export class JoinPage {
     return [
       { label: 'Perfil, WhatsApp, llamadas y reseñas', free: true, pro: true },
       { label: 'Trabajos con fotos en tu perfil', free: false, pro: `${PRO_WORK_LIMIT} × ${PHOTOS_PER_WORK} fotos` },
-      { label: 'Fotos y Destacados en la búsqueda', free: false, pro: true },
+      { label: 'Aparecer destacado en la búsqueda', free: false, pro: true },
       { label: 'Estadísticas', free: 'Totales', pro: 'Completas' },
       {
-        label: 'Responder pedidos de búsqueda',
+        label: 'Responder pedidos de presupuesto',
         free: limit === undefined ? 'Con cupo' : limit === null ? 'Sin límite' : `${limit} en total`,
         pro: 'Sin límite',
       },
@@ -350,7 +353,7 @@ export class JoinPage {
   });
   protected readonly moreRows: CompareRow[] = [
     { label: 'Agenda y solicitudes por Resuelve', free: true, pro: true },
-    { label: 'Llegás antes que Free con espera', free: false, pro: true },
+    { label: 'Te llegan antes los pedidos compartidos con Gratis', free: false, pro: true },
     { label: 'Presupuestos en PDF', free: false, pro: true },
     { label: 'Tu mes en CSV y resumen semanal', free: false, pro: true },
   ];
@@ -360,6 +363,7 @@ export class JoinPage {
   protected readonly weAsk = ['Tu nombre y tu email', 'Qué servicios hacés', 'Dónde trabajás: toda la ciudad o algunos barrios', 'Un título para tu perfil'];
   protected readonly weDontAsk = ['CUIT ni condición de IVA', 'Tarjeta para crear tu perfil', 'Matrícula para aparecer', 'Comisión por tus trabajos'];
   protected readonly earlyAccess = PRO_EARLY_ACCESS;
+  protected readonly proLines = computed(() => proThreeLines(this.plans()?.free.quoteLimit));
   protected readonly directRequests = FREE_DIRECT_REQUESTS;
 
   /** El cupo y el precio salen de GET /plans: el cupo de Free se dice antes de crear la cuenta, no al agotarlo. */
@@ -371,7 +375,7 @@ export class JoinPage {
     const free =
       limit == null
         ? 'Crear tu perfil y usar Resuelve Free es gratis.'
-        : `Crear tu perfil y usar Resuelve Free es gratis: te llegan solicitudes y te contactan por WhatsApp o llamadas. Con presupuesto podés responder ${limit === 1 ? '1 pedido' : `${limit} pedidos`} de búsqueda en total: no se renueva cada mes, y los pedidos que te hacen a vos directamente no cuentan.`;
+        : `Crear tu perfil y usar Resuelve Free es gratis: te llegan solicitudes y te contactan por WhatsApp o llamadas. Podés responder ${limit === 1 ? '1 pedido' : `${limit} pedidos`} de presupuesto en total: no se renueva cada mes, y los pedidos que te hacen a vos directamente no cuentan.`;
     const pro = price
       ? `PRO es opcional: ${price} por mes, respondés sin ese límite y lo cancelás cuando quieras.`
       : 'PRO es opcional: se paga por mes, respondés sin ese límite y lo cancelás cuando quieras.';

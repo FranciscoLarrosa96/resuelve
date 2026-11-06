@@ -25,7 +25,7 @@ describe('Beneficio de la cuenta referida', () => {
   });
   it('REWARDED: los días del backend, sin pasos ni botones', () => {
     const { el, text } = render({ status: 'REWARDED', rewardDays: 21 });
-    expect(text()).toContain('Activaste 21 días de Resuelve PRO');
+    expect(text()).toContain('Activaste tu prueba de Resuelve PRO');
     expect(text()).toContain('La prueba es única por persona.');
     expect(el.querySelector('ul, a, button')).toBeNull();
   });
@@ -36,7 +36,7 @@ describe('Beneficio de la cuenta referida', () => {
   });
   it('REGISTERED (invitación anterior): un solo botón para activar', () => {
     const { el, text } = render({ status: 'REGISTERED', rewardDays: 7 });
-    expect(text()).toContain('Tenés 7 días de PRO esperándote');
+    expect(text()).toContain('Tenés una prueba gratis de PRO esperándote');
     expect(el.querySelector('[data-testid="referral-claim"]')?.getAttribute('href')).toBe('/pro/plan#prueba-pro');
     expect(el.querySelector('button')).toBeNull();
   });

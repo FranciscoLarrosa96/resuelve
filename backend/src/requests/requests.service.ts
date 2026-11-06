@@ -1,3 +1,4 @@
+import { markTrialFirstRequest } from '../plans/pro-trial';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -439,6 +440,8 @@ export class RequestsService {
           type: FunnelEventType.FIRST_COMPATIBLE_OPPORTUNITY_RECEIVED,
           professionalId: pro.id,
         });
+        // Prueba «hasta tu primer pedido»: desde acá corren los días de la prueba.
+        await markTrialFirstRequest(m, pro.id, this.config, availableAt);
         // Volver a contratar = pedido dirigido a quien ya completó un trabajo para este cliente.
         if (targeted && (await isRehire(m, clientId, pro.id))) {
           await recordFunnelEvent(m, {
