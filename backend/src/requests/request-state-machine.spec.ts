@@ -18,7 +18,7 @@ describe('request state machine', () => {
   it('impide transiciones imposibles', () => {
     expect(canTransition(S.WAITING_QUOTES, S.PROFESSIONAL_SELECTED)).toBe(false); // elegir sin presupuestos
     expect(canTransition(S.WAITING_QUOTES, S.COMPLETED)).toBe(false); // completar sin elegir
-    expect(canTransition(S.PROFESSIONAL_SELECTED, S.COMPLETED)).toBe(false); // completar sin cita confirmada
+    expect(canTransition(S.PROFESSIONAL_SELECTED, S.COMPLETED)).toBe(true); // coordinar un horario en Resuelve es opcional
     expect(canTransition(S.COMPLETED, S.SCHEDULED)).toBe(false); // reprogramar un trabajo hecho
     expect(canTransition(S.COMPLETED, S.CANCELLED)).toBe(false); // cancelar un trabajo hecho
     expect(canTransition(S.CLOSED, S.WAITING_QUOTES)).toBe(false); // reabrir

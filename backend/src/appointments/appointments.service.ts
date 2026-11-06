@@ -29,7 +29,7 @@ import {
   AppointmentStatus,
 } from './appointment.entity';
 import { presentAppointment } from './appointment.presenter';
-import { completionDueQuery, isCompletionDue } from './completion';
+import { canCompleteWithoutSchedule, completionDueQuery, isCompletionDue } from './completion';
 import { AppointmentsQueryDto, ProposeAppointmentDto } from './dto/appointment.dto';
 
 const DAY_MS = 24 * 3600 * 1000;
@@ -371,6 +371,39 @@ export class AppointmentsService {
       if (!confirmed) {
         // Trabajo coordinado por el flujo de "trabajos" (sin cita): cierra por el horario del trabajo.
         const job = await this.openScheduledJob(m, requestId);
+        if (!job && canCompleteWithoutSchedule(request.status)) {
+          // Sin horario en Resuelve (coordinaron por fuera): se cierra cuando una de las partes lo dice.
+          const party = pro ? AppointmentParty.PROFESSIONAL : AppointmentParty.CLIENT;
+          await m.update(
+            Appointment,
+            { requestId, status: AppointmentStatus.PROPOSED },
+            { status: AppointmentStatus.CANCELLED, cancelledBy: party },
+          );
+          const open = await m.query<{ id: string }[]>(
+            `WITH updated AS (UPDATE jobs SET status = 'COMPLETED', completed_at = now(), updated_at = now()
+              WHERE request_id = $1 AND status NOT IN ('COMPLETED', 'CANCELLED')
+            RETURNING id) SELECT id FROM updated`,
+            [requestId],
+          );
+          for (const j of open) {
+            await m.query(
+              `INSERT INTO job_events (job_id, actor_user_id, type, details)
+               VALUES ($1, $2, 'COMPLETED', jsonb_build_object('source', 'WITHOUT_SCHEDULE', 'by', $3::text))`,
+              [j.id, userId, party],
+            );
+          }
+          await m.update(ServiceRequest, requestId, {
+            status: RequestStatus.COMPLETED,
+            completedAt: new Date(),
+            completedBy: party,
+          });
+          const professionalId = request.selectedProfessionalId!;
+          await recalculateProfessionalMetrics(m, professionalId);
+          await clearCloseReminders(m, requestId);
+          await notifyReviewAvailable(m, { id: request.id, clientId: request.clientId });
+          await notifyProWorkCompleted(m, { requestId, professionalId }, userId);
+          return { pro };
+        }
         if (!job) throw stateChanged(null);
         assertJobCloseable(jobCloseAt(job.date, job.scheduled_time, job.duration_minutes));
         const party = pro ? AppointmentParty.PROFESSIONAL : AppointmentParty.CLIENT;

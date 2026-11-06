@@ -237,7 +237,7 @@ export class RequestDetailPage {
     if (a?.status === 'CANCELLED' && a.cancelledBy === 'CLIENT')
       return 'Cancelaste el horario. El profesional te va a proponer otra fecha.';
     if (a?.status === 'CANCELLED') return 'El profesional retiró el horario propuesto. Te va a proponer otra fecha.';
-    return 'Esperando coordinación. El profesional te va a proponer fecha y horario.';
+    return 'Coordiná el día con el profesional por WhatsApp o teléfono. Si quiere, te propone un horario acá.';
   });
 
   protected readonly slot = computed(() => {
@@ -436,7 +436,7 @@ export class RequestDetailPage {
   protected async confirmAppointment(action: AppointmentAction): Promise<void> {
     const r = this.request();
     const id = r?.appointment?.id ?? null;
-    if (!id && !r?.job) return;
+    if (!id && !r?.job && !(action === 'complete' && r?.canCompleteWithoutSchedule)) return;
     const ok = await this.store.appointment(action, id);
     this.appointmentDialog.set(null);
     if (!ok) {

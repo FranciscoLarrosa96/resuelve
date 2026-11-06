@@ -37,7 +37,7 @@ type StepState = 'done' | 'current' | 'upcoming' | 'off';
 type Section = 'schedule' | 'client' | 'quote' | 'checklist' | 'notes' | 'history';
 type NextAction = 'schedule' | 'checklist' | 'complete';
 
-const STEP_LABELS = ['Presupuesto aceptado', 'Día y horario', 'Preparar el trabajo', 'Marcarlo realizado'];
+const STEP_LABELS = ['Presupuesto aceptado', 'Coordinar el día', 'Preparar el trabajo', 'Marcarlo realizado'];
 const STAGE_STEP: Record<JobStage, number> = { schedule: 1, prepare: 2, finish: 3, done: 4, cancelled: -1 };
 /** Escritorio = recorrido por etapas; debajo, acordeones con la acción fija abajo. */
 const DESKTOP_QUERY = '(min-width: 1024px)';
@@ -115,6 +115,14 @@ export class ProJobDetailPage {
     const when = this.closesLabel();
     switch (this.stage()) {
       case 'schedule':
+        // Agendar en Resuelve es opcional: lo habitual es arreglarlo por WhatsApp o teléfono.
+        if (j?.canCompleteWithoutSchedule)
+          return {
+            title: 'Coordiná el día con el cliente',
+            text: 'Hablalo por WhatsApp o teléfono. Agendarlo en «Día y horario» es opcional. Cuando lo termines, marcalo realizado.',
+            action: 'complete',
+            actionLabel: 'Ya hice el trabajo',
+          };
         return this.canEditSchedule()
           ? {
               title: 'Agendá el día del trabajo',

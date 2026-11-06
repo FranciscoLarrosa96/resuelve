@@ -3,7 +3,8 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { JobStatus as S } from './job.entity';
 
 const TRANSITIONS: Readonly<Record<S, readonly S[]>> = {
-  [S.TO_COORDINATE]: [S.SCHEDULED, S.CANCELLED],
+  // COMPLETED directo: agendar en Resuelve es opcional (lo coordinan por WhatsApp o teléfono).
+  [S.TO_COORDINATE]: [S.SCHEDULED, S.COMPLETED, S.CANCELLED],
   [S.SCHEDULED]: [S.SCHEDULED, S.IN_PROGRESS, S.COMPLETED, S.CANCELLED, S.TO_COORDINATE],
   [S.IN_PROGRESS]: [S.COMPLETED, S.CANCELLED],
   [S.COMPLETED]: [],

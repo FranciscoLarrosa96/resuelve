@@ -20,6 +20,15 @@ export function isCompletionDue(
   );
 }
 
+/**
+ * Coordinar un horario en Resuelve es opcional: con un profesional elegido y sin cita
+ * confirmada, cliente o elegido pueden marcar el trabajo como realizado cuando quieran
+ * (lo arreglaron por WhatsApp o teléfono). Una cita confirmada sigue esperando su horario.
+ */
+export function canCompleteWithoutSchedule(requestStatus: RequestStatus): boolean {
+  return requestStatus === RequestStatus.PROFESSIONAL_SELECTED;
+}
+
 /** Trabajos pendientes de cierre de un profesional o de un cliente. */
 export function completionDueQuery(m: EntityManager, by: { professionalId: string } | { clientId: string }) {
   const qb = m

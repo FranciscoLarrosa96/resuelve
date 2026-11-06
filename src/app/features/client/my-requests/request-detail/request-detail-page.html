@@ -117,9 +117,23 @@
               </h2>
               @if (job.status === 'TO_COORDINATE') {
                 <p class="mt-1.5 text-sm text-ink-soft">
-                  El profesional coordinará con vos una fecha. El horario puede definirse más
-                  adelante.
+                  Coordiná el día con el profesional por WhatsApp o teléfono. No hace falta agendarlo acá.
                 </p>
+              }
+              @if (r.canCompleteWithoutSchedule) {
+                <div class="mt-4 rounded-2xl border border-line bg-surface p-4" data-testid="complete-without-schedule">
+                  <p class="text-[15px] leading-6 text-ink-soft">
+                    <b class="text-ink">¿Ya hicieron el trabajo?</b> Si lo arreglaron por WhatsApp o teléfono, marcalo acá. No hace falta agendarlo.
+                  </p>
+                  <button
+                    type="button"
+                    class="button-secondary mt-3 h-12 rounded-xl px-5 text-[15px] font-semibold text-ink disabled:opacity-55 press"
+                    [disabled]="busy()"
+                    (click)="askAppointment('complete')"
+                  >
+                    Ya se hizo el trabajo
+                  </button>
+                </div>
               }
               @if (job.scheduledDate) {
                 <p class="mt-2 text-[16px] font-semibold">
@@ -338,6 +352,22 @@
                   </p>
                 }
               </section>
+
+              @if (r.canCompleteWithoutSchedule) {
+                <div class="mt-4 rounded-2xl border border-line bg-surface p-4" data-testid="complete-without-schedule">
+                  <p class="text-[15px] leading-6 text-ink-soft">
+                    <b class="text-ink">¿Ya hicieron el trabajo?</b> Si lo arreglaron por WhatsApp o teléfono, marcalo acá. No hace falta agendarlo.
+                  </p>
+                  <button
+                    type="button"
+                    class="button-secondary mt-3 h-12 rounded-xl px-5 text-[15px] font-semibold text-ink disabled:opacity-55 press"
+                    [disabled]="busy()"
+                    (click)="askAppointment('complete')"
+                  >
+                    Ya se hizo el trabajo
+                  </button>
+                </div>
+              }
 
               @if (coordination() === 'proposed' && slot(); as sl) {
                 <section
