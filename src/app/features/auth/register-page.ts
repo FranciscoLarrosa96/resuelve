@@ -199,7 +199,7 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
         </button>
         <p class="min-h-5 text-center text-[14px] text-muted" aria-live="polite">
           @if (slow()) {
-            Estamos despertando el servidor, puede tardar unos segundos más.
+            Está tardando un poco más de lo normal. Ya casi está.
           }
         </p>
         <p class="text-center text-[14px] leading-relaxed text-muted" data-testid="legal-note">

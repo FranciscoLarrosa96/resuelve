@@ -345,11 +345,16 @@
     }
   }
   @keyframes shimmer {
-    0% {
-      background-position: -400px 0;
+    from {
+      background-position: 100% 0;
     }
-    100% {
-      background-position: 400px 0;
+    to {
+      background-position: 0 0;
+    }
+  }
+  @keyframes skeleton-in {
+    from {
+      opacity: 0;
     }
   }
   @keyframes draw {
@@ -464,8 +469,8 @@
   --color-on-inverse: #1d2423;
   --color-scrim: #101615;
 
-  --color-shimmer-a: #1e2826;
-  --color-shimmer-b: #2a3431;
+  --color-shimmer-a: #24383c;
+  --color-shimmer-b: #34494d;
   --color-placeholder-a: #232a26;
   --color-placeholder-b: #1d2320;
 
@@ -680,15 +685,29 @@
 }
 
 /* Loading placeholder */
+/* Esqueleto de carga. El brillo es relativo a la ventana (background fixed): todos los
+   huesos de la pantalla brillan juntos, como una sola pasada, en vez de cada bloque por su
+   cuenta. Sigue mientras se carga (suave, con pausa); con movimiento reducido queda quieto. */
 @utility shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--color-shimmer-a) 0,
-    var(--color-shimmer-b) 80px,
-    var(--color-shimmer-a) 160px
+  background-color: var(--color-shimmer-a);
+  background-image: linear-gradient(
+    100deg,
+    transparent 40%,
+    var(--color-shimmer-b) 50%,
+    transparent 60%
   );
-  background-size: 800px 100%;
-  animation: shimmer 1.3s linear 3;
+  background-size: 300% 100%;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  animation: shimmer 1.8s var(--ease-out-soft) infinite;
+}
+
+/* Cáscara de una tarjeta que todavía carga: misma superficie y borde que la real, con los
+   huesos (.shimmer) adentro. Entra con un fundido corto para no parpadear en cargas rápidas. */
+@utility skeleton-card {
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  animation: skeleton-in 240ms ease-out 120ms both;
 }
 
 /* Photo placeholder (fotos del pedido / portfolio) */
@@ -1012,9 +1031,12 @@
   .button-primary:active {
     transform: none;
   }
-  .shimmer {
+  .shimmer,
+  .skeleton-card {
     animation: none;
-    background: var(--color-shimmer-a);
+  }
+  .shimmer {
+    background-image: none;
   }
   .animate-spin,
   .animate-pulse,
