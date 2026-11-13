@@ -120,7 +120,7 @@ import { AuthForm, FIELD_CLASS, SUBMIT_CLASS } from './auth-form';
         </button>
         <p class="min-h-5 text-center text-[14px] text-muted" aria-live="polite">
           @if (slow()) {
-            Estamos despertando el servidor, puede tardar unos segundos más.
+            Está tardando un poco más de lo normal. Ya casi está.
           }
         </p>
       </form>

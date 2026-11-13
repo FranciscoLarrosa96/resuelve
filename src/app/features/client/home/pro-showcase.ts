@@ -62,6 +62,18 @@ export interface ShowcaseItem {
         transform: translateY(6px);
       }
     }
+    .bone-card {
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr);
+      gap: 16px;
+      padding: 22px;
+      border-radius: var(--radius-xl);
+    }
+    @media (max-width: 1023px) {
+      .bone-lg {
+        display: none;
+      }
+    }
     .card app-avatar {
       display: flex;
       width: 72px;
@@ -171,9 +183,39 @@ export interface ShowcaseItem {
 
       @if (loading()) {
         <div class="showcase mt-7" aria-hidden="true">
-          <span class="shimmer h-56 rounded-xl"></span>
-          <span class="shimmer h-56 rounded-xl"></span>
-          <span class="shimmer hidden h-56 rounded-xl lg:block"></span>
+          <span class="skeleton-card bone-card">
+            <span class="shimmer h-[88px] w-[72px] rounded-lg"></span>
+            <span class="flex flex-col gap-2.5 pt-1">
+              <span class="shimmer h-3.5 w-1/2 rounded-md"></span>
+              <span class="shimmer h-5.5 w-4/5 rounded-md"></span>
+            </span>
+            <span class="col-span-2 flex flex-col gap-2 border-t border-line pt-4">
+              <span class="shimmer h-3.5 w-2/5 rounded-md"></span>
+              <span class="shimmer h-3.5 w-3/5 rounded-md"></span>
+            </span>
+          </span>
+          <span class="skeleton-card bone-card">
+            <span class="shimmer h-[88px] w-[72px] rounded-lg"></span>
+            <span class="flex flex-col gap-2.5 pt-1">
+              <span class="shimmer h-3.5 w-1/2 rounded-md"></span>
+              <span class="shimmer h-5.5 w-4/5 rounded-md"></span>
+            </span>
+            <span class="col-span-2 flex flex-col gap-2 border-t border-line pt-4">
+              <span class="shimmer h-3.5 w-2/5 rounded-md"></span>
+              <span class="shimmer h-3.5 w-3/5 rounded-md"></span>
+            </span>
+          </span>
+          <span class="skeleton-card bone-card bone-lg">
+            <span class="shimmer h-[88px] w-[72px] rounded-lg"></span>
+            <span class="flex flex-col gap-2.5 pt-1">
+              <span class="shimmer h-3.5 w-1/2 rounded-md"></span>
+              <span class="shimmer h-5.5 w-4/5 rounded-md"></span>
+            </span>
+            <span class="col-span-2 flex flex-col gap-2 border-t border-line pt-4">
+              <span class="shimmer h-3.5 w-2/5 rounded-md"></span>
+              <span class="shimmer h-3.5 w-3/5 rounded-md"></span>
+            </span>
+          </span>
         </div>
         <p class="sr-only" role="status">Cargando profesionales destacados...</p>
       } @else if (visible().length) {
